@@ -1,19 +1,22 @@
 import matplotlib.pyplot as plt
 from random import *
 from math import *
+from time import sleep
 
 min_position = 0
 max_position = 10
 
 time_interval = 1.0
 
+base_mortality = 0.2
+
 def get_mortality(age):
-    calculated_mortality = 1.0/(2.0+exp(4.0-age/10.0))
+    calculated_mortality = base_mortality/(2.0+exp(4.0-age/10.0))
     
     return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = (time_last_infected/(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2
+    calculated_immunity = (1.0-random()/10.0)*((time_last_infected*(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2)
     
     return calculated_immunity
 
@@ -42,7 +45,9 @@ class Organism:
     
     def change_immunity(self):
         if self.time_last_infected > -1:
-            self.immunity = self.immunity+(1.0-self.immunity)*get_immunity(self.time_last_infected)
+            calculated_immunity = get_immunity(self.time_last_infected)
+            
+            self.immunity = (max(self.immunity, calculated_immunity)+self.immunity)/2.0
 
     def change_infectivity(self):
         if self.time_last_infected > -1:
@@ -65,7 +70,7 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*2.0-4.0*random()))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*2.0-4.0*random()))
     
-organisms = [Organism(age=randint(0,80), immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(60)]
+organisms = [Organism(age=randint(0,50), immunity=0, infectivity=0, mask_reduction=random()/3, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
 organisms.append(Organism(age=randint(0,10), immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
 
 initial_count = len(organisms)
@@ -77,13 +82,18 @@ immunity_values = []
 infectivity_values = []
 proportion_infected_values = []
 
-fig = plt.figure()
+time_total = 100
 
-for k in range(40):
+for k in range(time_total):
     plt.clf()
     
     for organism in organisms:
-        plt.scatter(organism.get_x_position(), organism.get_y_position(), color=("red" if organism.infectivity > 0 else "green"))
+        plt.scatter(organism.get_x_position(), organism.get_y_position(), color=((organism.infectivity,0,0) if organism.infectivity > 0 else (0,1,0)))
+    
+    plt.plot(x_values, proportion_values)
+    plt.plot(x_values, immunity_values)
+    plt.plot(x_values, infectivity_values)
+    plt.plot(x_values, proportion_infected_values)
     
     plt.pause(0.05)
     
@@ -141,21 +151,13 @@ for k in range(40):
     mean_infectivity /= len(temp_organisms)
     proportion_infected /= len(temp_organisms)
     
-    x_values.append(k)
-    age_values.append(mean_age)
-    proportion_values.append(len(temp_organisms)/initial_count)
-    immunity_values.append(mean_immunity)
-    infectivity_values.append(mean_infectivity)
-    proportion_infected_values.append(proportion_infected)
+    x_values.append(min_position+(max_position-min_position)*(k/time_total))
+    age_values.append(min_position+(max_position-min_position)*mean_age)
+    proportion_values.append(min_position+(max_position-min_position)*(len(temp_organisms)/initial_count))
+    immunity_values.append(min_position+(max_position-min_position)*mean_immunity)
+    infectivity_values.append(min_position+(max_position-min_position)*mean_infectivity)
+    proportion_infected_values.append(min_position+(max_position-min_position)*proportion_infected)
     
     organisms = temp_organisms.copy()
 
-plt.clf()
-
-#plt.plot(x_values, age_values)
-plt.plot(x_values, proportion_values)
-plt.plot(x_values, immunity_values)
-plt.plot(x_values, infectivity_values)
-plt.plot(x_values, proportion_infected_values)
-
-plt.show()
+sleep(5)
