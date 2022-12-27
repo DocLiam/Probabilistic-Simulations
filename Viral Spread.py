@@ -26,8 +26,9 @@ def get_infectivity(time_last_infected):
     return calculated_infectivity
 
 class Organism:
-    def __init__(self, age, immunity, infectivity, mask_reduction, time_last_infected, x_position, y_position):
+    def __init__(self, age, can_recover, immunity, infectivity, mask_reduction, time_last_infected, x_position, y_position):
         self.age = age  # age in unit time (0-infinity)
+        self.can_recover = can_recover  # whether the person can recover, or is persistently sick
         self.mortality = get_mortality(age)  # likelihood of death for each unit time infected (0-1)
         self.immunity = immunity  # immunity to death from each unit time infected (0-1)
         self.infectivity = infectivity  # coefficient of infectivity (0-1)
@@ -41,16 +42,19 @@ class Organism:
         self.age += time_interval
         
     def change_mortality(self):
-        self.mortality = get_mortality(self.age)
+        if self.can_recover:
+            self.mortality = get_mortality(self.age)
+        else:
+            self.mortality = 0
     
     def change_immunity(self):
-        if self.time_last_infected > -1:
+        if self.time_last_infected > -1 and self.can_recover:
             calculated_immunity = get_immunity(self.time_last_infected)
             
             self.immunity = (max(self.immunity, calculated_immunity)+self.immunity)/2.0
 
     def change_infectivity(self):
-        if self.time_last_infected > -1:
+        if self.time_last_infected > -1 and self.can_recover:
             self.infectivity = max(0, get_infectivity(self.time_last_infected))
     
     def reset_time_last_infected(self):
@@ -70,8 +74,8 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*2.0-4.0*random()))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*2.0-4.0*random()))
     
-organisms = [Organism(age=randint(0,50), immunity=0, infectivity=0, mask_reduction=random()/3, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
-organisms.append(Organism(age=randint(0,10), immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
+organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
+organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
 
 initial_count = len(organisms)
 
