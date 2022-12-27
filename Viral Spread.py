@@ -5,17 +5,15 @@ from math import *
 min_position = 0
 max_position = 10
 
-base_mortality = 0.1
-
 time_interval = 1.0
 
 def get_mortality(age):
     calculated_mortality = 1.0/(2.0+exp(4.0-age/10.0))
     
-    return base_mortality
+    return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = (time_last_infected/2.0-0.25)/exp(time_last_infected/2.0-0.5)+0.4122
+    calculated_immunity = (time_last_infected/(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2
     
     return calculated_immunity
 
@@ -26,7 +24,7 @@ def get_infectivity(time_last_infected):
 
 class Organism:
     def __init__(self, age, immunity, infectivity, mask_reduction, time_last_infected, x_position, y_position):
-        self.__age = age  # age in unit time (0-infinity)
+        self.age = age  # age in unit time (0-infinity)
         self.mortality = get_mortality(age)  # likelihood of death for each unit time infected (0-1)
         self.immunity = immunity  # immunity to death from each unit time infected (0-1)
         self.infectivity = infectivity  # coefficient of infectivity (0-1)
@@ -37,10 +35,10 @@ class Organism:
         self.__y_position = y_position  # y position (min position-max position)
 
     def change_age(self):
-        self.__age += time_interval
+        self.age += time_interval
         
     def change_mortality(self):
-        self.mortality = get_mortality(self.__age)
+        self.mortality = get_mortality(self.age)
     
     def change_immunity(self):
         if self.time_last_infected > -1:
@@ -67,14 +65,21 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*2.0-4.0*random()))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*2.0-4.0*random()))
     
-organisms = [Organism(age=randint(0,40), immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(60)]
-organisms.append(Organism(age=randint(0,10), immunity=0, infectivity=0.5, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
+organisms = [Organism(age=randint(0,80), immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(60)]
+organisms.append(Organism(age=randint(0,10), immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
+
+initial_count = len(organisms)
 
 x_values = []
+age_values = []
+proportion_values = []
+immunity_values = []
+infectivity_values = []
+proportion_infected_values = []
 
-for k in range(100):
-    x_values.append(k)
-    
+fig = plt.figure()
+
+for k in range(40):
     plt.clf()
     
     for organism in organisms:
@@ -108,17 +113,49 @@ for k in range(100):
                 if random() < threshold:
                     temp_organism1.reset_time_last_infected()
     
+    mean_age = 0        
+    mean_immunity = 0
+    mean_infectivity = 0
+    proportion_infected = 0
+    
     for temp_organism in temp_organisms:
-        mortality = time_interval*temp_organism.mortality*temp_organism.infectivity
-        
-        if random() < mortality:
-            temp_organisms.remove(temp_organism)
-        
         temp_organism.change_age()
         temp_organism.change_mortality()
         temp_organism.change_immunity()
         temp_organism.change_infectivity()
         temp_organism.change_position()
         temp_organism.change_time_last_infected()
+
+        mortality = time_interval*temp_organism.mortality*temp_organism.infectivity*(1.0-temp_organism.immunity)
+        
+        if random() < mortality:
+            temp_organisms.remove(temp_organism)
+        else:
+            mean_age += temp_organism.age
+            mean_immunity += temp_organism.immunity
+            mean_infectivity += temp_organism.infectivity
+            proportion_infected += 1 if temp_organism.infectivity > 0 else 0
+    
+    mean_age /= len(temp_organisms)
+    mean_immunity /= len(temp_organisms)
+    mean_infectivity /= len(temp_organisms)
+    proportion_infected /= len(temp_organisms)
+    
+    x_values.append(k)
+    age_values.append(mean_age)
+    proportion_values.append(len(temp_organisms)/initial_count)
+    immunity_values.append(mean_immunity)
+    infectivity_values.append(mean_infectivity)
+    proportion_infected_values.append(proportion_infected)
     
     organisms = temp_organisms.copy()
+
+plt.clf()
+
+#plt.plot(x_values, age_values)
+plt.plot(x_values, proportion_values)
+plt.plot(x_values, immunity_values)
+plt.plot(x_values, infectivity_values)
+plt.plot(x_values, proportion_infected_values)
+
+plt.show()
