@@ -6,9 +6,12 @@ from time import sleep
 min_position = 0
 max_position = 10
 
-time_interval = 1.0
+time_interval = 0.2
 
-base_mortality = 0.2
+base_mortality = 0.1
+
+time_max_immunity = 2.18
+allowed_error = 0.001
 
 def get_mortality(age):
     calculated_mortality = base_mortality/(2.0+exp(4.0-age/10.0))
@@ -16,7 +19,7 @@ def get_mortality(age):
     return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = (1.0-random()/10.0)*((time_last_infected*(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2)
+    calculated_immunity = ((time_last_infected*(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2)
     
     return calculated_immunity
 
@@ -25,8 +28,31 @@ def get_infectivity(time_last_infected):
     
     return calculated_infectivity
 
+def binary_search_value(x_lower, x_upper, y, error, f):
+    x_mid = (x_lower+x_upper)/2.0
+    
+    if f(x_lower) == f(x_upper):
+        return x_mid
+    
+    f_incr = f(x_upper) > f(x_lower)
+
+    while abs(f(x_mid)-y) > error:
+        if f(x_mid) < y:
+            temp_x_lower = x_mid if f_incr else x_lower
+            temp_x_upper = x_upper if f_incr else x_mid
+            x_mid = (x_mid+x_upper)/2.0 if f_incr else (x_lower+x_mid)/2.0
+        else:
+            temp_x_lower = x_lower if f_incr else x_mid
+            temp_x_upper = x_mid if f_incr else x_upper
+            x_mid = (x_lower+x_mid)/2.0 if f_incr else (x_mid+x_upper)/2.0
+        
+        x_lower = temp_x_lower
+        x_upper = temp_x_upper
+        
+    return x_mid
+
 class Organism:
-    def __init__(self, age, can_recover, immunity, infectivity, mask_reduction, time_last_infected, x_position, y_position):
+    def __init__(self, age, can_recover, immunity, infectivity, mask_reduction, time_last_infected, time_first_infected, x_position, y_position):
         self.age = age  # age in unit time (0-infinity)
         self.can_recover = can_recover  # whether the person can recover, or is persistently sick
         self.mortality = get_mortality(age)  # likelihood of death for each unit time infected (0-1)
@@ -34,6 +60,7 @@ class Organism:
         self.infectivity = infectivity  # coefficient of infectivity (0-1)
         self.mask_reduction = mask_reduction  # coefficient of mask reduction (0-1)
         self.time_last_infected = time_last_infected  # time since last infection started in unit time (0-infinity)
+        self.time_first_infected = time_first_infected  # time since first infection started in unit time (0-infinity)
         
         self.__x_position = x_position  # x position (min position-max position)
         self.__y_position = y_position  # y position (min position-max position)
@@ -48,21 +75,26 @@ class Organism:
             self.mortality = 0
     
     def change_immunity(self):
-        if self.time_last_infected > -1 and self.can_recover:
-            calculated_immunity = get_immunity(self.time_last_infected)
-            
-            self.immunity = (max(self.immunity, calculated_immunity)+self.immunity)/2.0
+        if self.time_first_infected > -1 and self.can_recover:
+            self.immunity = get_immunity(self.time_first_infected)
 
     def change_infectivity(self):
         if self.time_last_infected > -1 and self.can_recover:
             self.infectivity = max(0, get_infectivity(self.time_last_infected))
     
     def reset_time_last_infected(self):
+        if self.immunity > 0:
+            self.time_first_infected = binary_search_value(0, time_max_immunity, self.immunity, allowed_error, get_immunity)
+        else:
+            self.time_first_infected = 0
+            
         self.time_last_infected = 0
         
     def change_time_last_infected(self):
         if self.time_last_infected > -1:
             self.time_last_infected += time_interval
+        if self.time_first_infected > -1:
+            self.time_first_infected += time_interval
     
     def get_x_position(self):
         return self.__x_position
@@ -71,11 +103,11 @@ class Organism:
         return self.__y_position
 
     def change_position(self):
-        self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*2.0-4.0*random()))
-        self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*2.0-4.0*random()))
+        self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*(0.5-1.0*random())))
+        self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*(0.5-1.0*random())))
     
-organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
-organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
+organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
+organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
 
 initial_count = len(organisms)
 
@@ -164,4 +196,4 @@ for k in range(time_total):
     
     organisms = temp_organisms.copy()
 
-sleep(5)
+sleep(10)
