@@ -6,7 +6,7 @@ from time import sleep
 min_position = 0
 max_position = 10
 
-time_interval = 0.5
+time_interval = 0.4
 
 base_mortality = 0.1
 
@@ -131,7 +131,7 @@ for k in range(time_total):
     plt.plot(x_values, infectivity_values, color="orange")
     plt.plot(x_values, proportion_infected_values, color="red")
     
-    plt.pause(0.01)
+    plt.pause(0.0001)
     
     temp_organisms = organisms.copy()
     
@@ -145,7 +145,7 @@ for k in range(time_total):
             
             distance = ((organism1.get_x_position()-organism2.get_x_position())**2 + (organism1.get_y_position()-organism2.get_y_position())**2)**0.5
             
-            if True:
+            if distance < 4:
                 volumetric_probability_coefficient = 1/(1+distance**3)
                 
                 if organism1.infectivity > 0:
