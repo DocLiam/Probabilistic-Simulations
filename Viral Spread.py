@@ -4,9 +4,9 @@ from math import *
 from time import sleep
 
 min_position = 0
-max_position = 10
+max_position = 20
 
-time_interval = 0.2
+time_interval = 0.5
 
 base_mortality = 0.1
 
@@ -19,7 +19,7 @@ def get_mortality(age):
     return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = ((time_last_infected*(2.0/3.0)-0.12)/exp(time_last_infected/2.0-0.5)+0.2)
+    calculated_immunity = ((time_last_infected/2.0-0.3)/exp(time_last_infected/2.0-0.5)+0.5)
     
     return calculated_immunity
 
@@ -106,8 +106,8 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*(0.5-1.0*random())))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*(0.5-1.0*random())))
     
-organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(0,10), y_position=randint(0,10)) for i in range(50)]
-organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(0,10), y_position=randint(0,10)))
+organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(80)]
+organisms.append(Organism(age=randint(0,10), can_recover=True, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
 
 initial_count = len(organisms)
 
@@ -118,7 +118,7 @@ immunity_values = []
 infectivity_values = []
 proportion_infected_values = []
 
-time_total = 100
+time_total = 200
 
 for k in range(time_total):
     plt.clf()
@@ -131,7 +131,7 @@ for k in range(time_total):
     plt.plot(x_values, infectivity_values)
     plt.plot(x_values, proportion_infected_values)
     
-    plt.pause(0.05)
+    plt.pause(0.01)
     
     temp_organisms = organisms.copy()
     
