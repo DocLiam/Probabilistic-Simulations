@@ -4,7 +4,7 @@ from math import *
 from time import sleep
 
 min_position = 0
-max_position = 20
+max_position = 10
 
 time_interval = 0.5
 
@@ -14,17 +14,17 @@ time_max_immunity = 2.18
 allowed_error = 0.001
 
 def get_mortality(age):
-    calculated_mortality = base_mortality/(2.0+exp(4.0-age/10.0))
+    calculated_mortality = base_mortality/(2.0+exp(4.0-age/20.0))
     
     return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = ((time_last_infected/2.0-0.3)/exp(time_last_infected/2.0-0.5)+0.5)
+    calculated_immunity = ((time_last_infected/4.0-0.3)/exp(time_last_infected/4.0-0.5)+0.5)
     
     return calculated_immunity
 
 def get_infectivity(time_last_infected):
-    calculated_infectivity = (1.4*time_last_infected-1.4/29.0)/exp(0.5*time_last_infected-0.5/29.0)-0.048
+    calculated_infectivity = (time_last_infected-1.4/29.0)/exp((0.5/1.4)*time_last_infected-0.5/29.0)-0.048
     
     return calculated_infectivity
 
@@ -76,11 +76,11 @@ class Organism:
     
     def change_immunity(self):
         if self.time_first_infected > -1 and self.can_recover:
-            self.immunity = get_immunity(self.time_first_infected)
+            self.immunity = (1.0-random()/10.0)*get_immunity(self.time_first_infected)
 
     def change_infectivity(self):
         if self.time_last_infected > -1 and self.can_recover:
-            self.infectivity = max(0, get_infectivity(self.time_last_infected))
+            self.infectivity = (1.0-self.immunity)*max(0, get_infectivity(self.time_last_infected))
     
     def reset_time_last_infected(self):
         if self.immunity > 0:
@@ -106,7 +106,7 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*(0.5-1.0*random())))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*(0.5-1.0*random())))
     
-organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(80)]
+organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(60)]
 organisms.append(Organism(age=randint(0,10), can_recover=True, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
 
 initial_count = len(organisms)
@@ -126,10 +126,10 @@ for k in range(time_total):
     for organism in organisms:
         plt.scatter(organism.get_x_position(), organism.get_y_position(), color=((organism.infectivity,0,0) if organism.infectivity > 0 else (0,1,0)))
     
-    plt.plot(x_values, proportion_values)
-    plt.plot(x_values, immunity_values)
-    plt.plot(x_values, infectivity_values)
-    plt.plot(x_values, proportion_infected_values)
+    plt.plot(x_values, proportion_values, color="blue")
+    plt.plot(x_values, immunity_values, color="purple")
+    plt.plot(x_values, infectivity_values, color="orange")
+    plt.plot(x_values, proportion_infected_values, color="red")
     
     plt.pause(0.01)
     
@@ -145,19 +145,20 @@ for k in range(time_total):
             
             distance = ((organism1.get_x_position()-organism2.get_x_position())**2 + (organism1.get_y_position()-organism2.get_y_position())**2)**0.5
             
-            volumetric_probability_coefficient = 1/(1+distance**3)
-            
-            if organism1.infectivity > 0:
-                if organism2.infectivity == 0:
-                    threshold = time_interval*volumetric_probability_coefficient*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+            if True:
+                volumetric_probability_coefficient = 1/(1+distance**3)
+                
+                if organism1.infectivity > 0:
+                    if organism2.infectivity == 0:
+                        threshold = time_interval*volumetric_probability_coefficient*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+                        
+                        if random() < threshold:
+                            temp_organism2.reset_time_last_infected()
+                elif organism2.infectivity > 0:
+                    threshold = time_interval*volumetric_probability_coefficient*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
                     
                     if random() < threshold:
-                        temp_organism2.reset_time_last_infected()
-            elif organism2.infectivity > 0:
-                threshold = time_interval*volumetric_probability_coefficient*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
-                
-                if random() < threshold:
-                    temp_organism1.reset_time_last_infected()
+                        temp_organism1.reset_time_last_infected()
     
     mean_age = 0        
     mean_immunity = 0
@@ -184,8 +185,11 @@ for k in range(time_total):
     
     mean_age /= len(temp_organisms)
     mean_immunity /= len(temp_organisms)
-    mean_infectivity /= len(temp_organisms)
+    mean_infectivity = mean_infectivity/proportion_infected if proportion_infected > 0 else 0
     proportion_infected /= len(temp_organisms)
+    
+    for temp_organism in temp_organisms:
+        temp_organism.mask_reduction = (proportion_infected+random()/10.0-0.05)
     
     x_values.append(min_position+(max_position-min_position)*(k/time_total))
     age_values.append(min_position+(max_position-min_position)*mean_age)
