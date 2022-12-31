@@ -9,6 +9,7 @@ max_position = 10
 time_interval = 0.4
 
 base_mortality = 0.1
+base_infectivity = 1.3
 
 time_max_immunity = 2.18
 allowed_error = 0.001
@@ -107,7 +108,7 @@ class Organism:
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*(0.5-1.0*random())))
     
 organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(60)]
-organisms.append(Organism(age=randint(0,10), can_recover=True, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
+organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
 
 initial_count = len(organisms)
 
@@ -150,12 +151,12 @@ for k in range(time_total):
                 
                 if organism1.infectivity > 0:
                     if organism2.infectivity == 0:
-                        threshold = time_interval*volumetric_probability_coefficient*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+                        threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
                         
                         if random() < threshold:
                             temp_organism2.reset_time_last_infected()
                 elif organism2.infectivity > 0:
-                    threshold = time_interval*volumetric_probability_coefficient*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+                    threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
                     
                     if random() < threshold:
                         temp_organism1.reset_time_last_infected()
