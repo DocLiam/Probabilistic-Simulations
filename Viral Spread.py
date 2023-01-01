@@ -9,9 +9,9 @@ max_position = 10
 time_interval = 0.4
 
 base_mortality = 0.1
-base_infectivity = 1.3
+base_infectivity = 3.0
 
-time_max_immunity = 2.18
+time_max_immunity = 20.8
 allowed_error = 0.001
 
 def get_mortality(age):
@@ -20,7 +20,7 @@ def get_mortality(age):
     return calculated_mortality
 
 def get_immunity(time_last_infected):
-    calculated_immunity = ((time_last_infected/4.0-0.3)/exp(time_last_infected/4.0-0.5)+0.5)
+    calculated_immunity = ((time_last_infected/16.0-0.3)/exp(time_last_infected/16.0-0.5)+0.5)
     
     return calculated_immunity
 
@@ -107,8 +107,8 @@ class Organism:
         self.__x_position = min(max_position, max(min_position, self.__x_position+time_interval*(0.5-1.0*random())))
         self.__y_position = min(max_position, max(min_position, self.__y_position+time_interval*(0.5-1.0*random())))
     
-organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(60)]
-organisms.append(Organism(age=randint(0,10), can_recover=False, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
+organisms = [Organism(age=randint(0,50), can_recover=True, immunity=0, infectivity=0, mask_reduction=0, time_last_infected=-1, time_first_infected=-1, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)) for i in range(80)]
+organisms.append(Organism(age=randint(0,10), can_recover=True, immunity=0, infectivity=1.0, mask_reduction=0, time_last_infected=0, time_first_infected=0, x_position=randint(min_position, max_position), y_position=randint(min_position, max_position)))
 
 initial_count = len(organisms)
 
@@ -135,31 +135,6 @@ for k in range(time_total):
     plt.pause(0.0001)
     
     temp_organisms = organisms.copy()
-    
-    for i in range(len(temp_organisms)):
-        for j in range(i, len(temp_organisms)):
-            organism1 = organisms[i]
-            organism2 = organisms[j]
-            
-            temp_organism1 = temp_organisms[i]
-            temp_organism2 = temp_organisms[j]
-            
-            distance = ((organism1.get_x_position()-organism2.get_x_position())**2 + (organism1.get_y_position()-organism2.get_y_position())**2)**0.5
-            
-            if distance < 4:
-                volumetric_probability_coefficient = 1/(1+distance**3)
-                
-                if organism1.infectivity > 0:
-                    if organism2.infectivity == 0:
-                        threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
-                        
-                        if random() < threshold:
-                            temp_organism2.reset_time_last_infected()
-                elif organism2.infectivity > 0:
-                    threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
-                    
-                    if random() < threshold:
-                        temp_organism1.reset_time_last_infected()
     
     mean_age = 0        
     mean_immunity = 0
@@ -188,6 +163,32 @@ for k in range(time_total):
     mean_immunity /= len(temp_organisms)
     mean_infectivity = mean_infectivity/proportion_infected if proportion_infected > 0 else 0
     proportion_infected /= len(temp_organisms)
+    
+    for i in range(len(temp_organisms)):
+        if temp_organisms[i].infectivity > 0 and proportion_infected < 0.5 or temp_organisms[i].infectivity == 0 and proportion_infected >= 0.5:
+            for j in range(len(temp_organisms)):
+                organism1 = organisms[i]
+                organism2 = organisms[j]
+                
+                temp_organism1 = temp_organisms[i]
+                temp_organism2 = temp_organisms[j]
+                
+                distance = ((organism1.get_x_position()-organism2.get_x_position())**2 + (organism1.get_y_position()-organism2.get_y_position())**2)**0.5
+                
+                if distance < 4:
+                    volumetric_probability_coefficient = 1/(1+distance**3)
+                    
+                    if organism1.infectivity > 0:
+                        if organism2.infectivity == 0:
+                            threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism1.infectivity*((1.0-organism2.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+                            
+                            if random() < threshold:
+                                temp_organism2.reset_time_last_infected()
+                    elif organism2.infectivity > 0:
+                        threshold = time_interval*volumetric_probability_coefficient*base_infectivity*organism2.infectivity*((1.0-organism1.immunity)*((1.0-organism1.mask_reduction)*(1.0-organism2.mask_reduction)))
+                        
+                        if random() < threshold:
+                            temp_organism1.reset_time_last_infected()
     
     for temp_organism in temp_organisms:
         temp_organism.mask_reduction = (proportion_infected+random()/10.0-0.05)
